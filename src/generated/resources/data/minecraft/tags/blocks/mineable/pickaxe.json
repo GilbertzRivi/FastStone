@@ -1,0 +1,7 @@
+{
+  "values": [
+    "faststone:logic_cable",
+    "faststone:logic_not_gate",
+    "faststone:logic_bus"
+  ]
+}

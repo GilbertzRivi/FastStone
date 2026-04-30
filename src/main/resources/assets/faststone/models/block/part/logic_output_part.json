@@ -1,0 +1,21 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "faststone:block/part/logic_output_part",
+    "part": "faststone:block/part/logic_output_part"
+  },
+  "elements": [
+    {
+      "from": [6, 6, 2],
+      "to": [10, 10, 6],
+      "faces": {
+        "north": { "texture": "#part", "uv": [6, 6, 10, 10] },
+        "south": { "texture": "#part", "uv": [6, 10, 10, 14] },
+        "west":  { "texture": "#part", "uv": [10, 6, 14, 10] },
+        "east":  { "texture": "#part", "uv": [2, 6, 6, 10] },
+        "up":    { "texture": "#part", "uv": [6, 10, 10, 14] },
+        "down":  { "texture": "#part", "uv": [6, 2, 10, 6] }
+      }
+    }
+  ]
+}

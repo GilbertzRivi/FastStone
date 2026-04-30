@@ -1,0 +1,8 @@
+{
+  "block.faststone.logic_bus": "Logic Bus",
+  "block.faststone.logic_cable": "Logic Cable",
+  "block.faststone.logic_not_gate": "Logic Not Gate",
+  "gui.faststone.mod_name": "Fast Stone",
+  "item.faststone.logic_input_part": "Logic Input Part",
+  "item.faststone.logic_output_part": "Logic Output Part"
+}

@@ -1,0 +1,67 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "faststone:block/logic_bus_core"
+      }
+    },
+    {
+      "when": {
+        "north": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_bus_side",
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "south": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_bus_side",
+        "y": 180,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "west": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_bus_side",
+        "y": 270,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "east": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_bus_side",
+        "y": 90,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "up": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_bus_side_vertical",
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "down": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_bus_side_vertical",
+        "x": 180,
+        "uvlock": true
+      }
+    }
+  ]
+}
