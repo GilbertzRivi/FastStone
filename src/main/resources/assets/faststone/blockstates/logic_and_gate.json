@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "faststone:block/gate/logic_and_gate"
+    }
+  }
+}

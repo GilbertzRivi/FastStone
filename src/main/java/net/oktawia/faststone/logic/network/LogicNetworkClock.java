@@ -1,5 +1,6 @@
 package net.oktawia.faststone.logic.network;
 
+import lombok.Getter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -8,6 +9,7 @@ import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.oktawia.faststone.Faststone;
+import net.oktawia.faststone.client.LogicDisplaySync;
 import net.oktawia.faststone.entities.LogicCableBlockEntity;
 
 import java.util.ArrayList;
@@ -21,28 +23,27 @@ import java.util.WeakHashMap;
 @Mod.EventBusSubscriber(modid = Faststone.MODID)
 public class LogicNetworkClock {
 
-    public static final int DEFAULT_NETWORK_TICKS_PER_GAME_TICK = 64;
-    public static final int MIN_NETWORK_TICKS_PER_GAME_TICK = 0;
-    public static final int MAX_NETWORK_TICKS_PER_GAME_TICK = 4096;
+    public static final float DEFAULT_NETWORK_TICK_RATE = 64.0F;
+    public static final float MIN_NETWORK_TICK_RATE = 0.0F;
+    public static final float MAX_NETWORK_TICK_RATE = 4096.0F;
 
-    private static int networkTicksPerGameTick = DEFAULT_NETWORK_TICKS_PER_GAME_TICK;
+    @Getter
+    private static float networkTickRate = DEFAULT_NETWORK_TICK_RATE;
 
     private static final Map<ServerLevel, Set<BlockPos>> MASTERS = new WeakHashMap<>();
+    private static final Map<ServerLevel, Float> TICK_ACCUMULATORS = new WeakHashMap<>();
 
     private static long networkTickId = 0;
     private static long gameTickId = 0;
 
-    public static int getNetworkTicksPerGameTick() {
-        return networkTicksPerGameTick;
-    }
-
-    public static int setNetworkTicksPerGameTick(int value) {
-        int clamped = Math.max(
-                MIN_NETWORK_TICKS_PER_GAME_TICK,
-                Math.min(MAX_NETWORK_TICKS_PER_GAME_TICK, value)
+    public static float setNetworkTickRate(float value) {
+        float clamped = Math.max(
+                MIN_NETWORK_TICK_RATE,
+                Math.min(MAX_NETWORK_TICK_RATE, value)
         );
 
-        networkTicksPerGameTick = clamped;
+        networkTickRate = clamped;
+        TICK_ACCUMULATORS.clear();
         return clamped;
     }
 
@@ -62,7 +63,9 @@ public class LogicNetworkClock {
 
     public static void clearLevel(ServerLevel level) {
         MASTERS.remove(level);
+        TICK_ACCUMULATORS.remove(level);
         LogicNetworkGraph.clearLevel(level);
+        LogicDisplaySync.clearLevel(level);
     }
 
     @SubscribeEvent
@@ -81,7 +84,15 @@ public class LogicNetworkClock {
 
         LogicNetworkGraph.processPendingRebuilds(level);
 
-        int ticksThisGameTick = networkTicksPerGameTick;
+        float rate = networkTickRate;
+
+        if (rate <= 0.0F) {
+            return;
+        }
+
+        float accumulator = TICK_ACCUMULATORS.getOrDefault(level, 0.0F) + rate;
+        int ticksThisGameTick = (int) accumulator;
+        TICK_ACCUMULATORS.put(level, accumulator - ticksThisGameTick);
 
         if (ticksThisGameTick <= 0) {
             return;
@@ -93,8 +104,10 @@ public class LogicNetworkClock {
             networkTickId++;
 
             for (LogicCableBlockEntity master : masters) {
-                master.networkEvaluate();
+                master.networkEvaluate(networkTickId);
             }
+
+            LogicDisplaySync.beginNetworkSample(level);
 
             for (LogicCableBlockEntity master : masters) {
                 master.networkCommit(networkTickId);
@@ -106,6 +119,8 @@ public class LogicNetworkClock {
         for (LogicCableBlockEntity master : masters) {
             master.networkAfterGameTick(gameTickId);
         }
+
+        LogicDisplaySync.endGameTick(level);
     }
 
     @SubscribeEvent

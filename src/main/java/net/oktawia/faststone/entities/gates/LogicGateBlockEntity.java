@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.oktawia.faststone.blocks.LogicCableBlock;
+import net.oktawia.faststone.defs.LangDefs;
 import net.oktawia.faststone.entities.LogicEndpointBlockEntity;
 import net.oktawia.faststone.logic.LogicCableColor;
 import net.oktawia.faststone.logic.LogicPortMode;
@@ -18,6 +20,10 @@ import net.oktawia.faststone.logic.network.LogicNetworkGraph;
 import java.util.EnumMap;
 
 public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity implements LogicNetworkPort {
+
+    public static final String STATE_NONE = "none";
+    public static final String STATE_INPUT = "input";
+    public static final String STATE_OUTPUT = "output";
 
     private final EnumMap<Direction, String> portStates = new EnumMap<>(Direction.class);
     private final EnumMap<Direction, LogicCableColor> portColors = new EnumMap<>(Direction.class);
@@ -41,21 +47,51 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
         }
     }
 
-    protected abstract String getDefaultPortStateId(Direction side);
+    protected String getDefaultPortStateId(Direction side) {
+        return STATE_NONE;
+    }
 
-    protected abstract String getNextPortStateId(Direction side, String currentStateId);
+    protected String getNextPortStateId(Direction side, String currentStateId) {
+        return switch (currentStateId) {
+            case STATE_NONE -> STATE_INPUT;
+            case STATE_INPUT -> STATE_OUTPUT;
+            case STATE_OUTPUT -> STATE_NONE;
+            default -> STATE_NONE;
+        };
+    }
 
-    protected abstract LogicPortMode getNetworkModeForState(Direction side, String stateId);
+    protected LogicPortMode getNetworkModeForState(Direction side, String stateId) {
+        return switch (stateId) {
+            case STATE_INPUT -> LogicPortMode.INPUT;
+            case STATE_OUTPUT -> LogicPortMode.OUTPUT;
+            default -> LogicPortMode.NONE;
+        };
+    }
 
-    protected abstract void recomputeOutputs();
+    protected int getRenderColorForState(Direction side, String stateId) {
+        return switch (stateId) {
+            case STATE_INPUT -> 0x3377FF;
+            case STATE_OUTPUT -> 0xFF3333;
+            default -> 0x000000;
+        };
+    }
+
+    protected String getTranslationKeyForState(Direction side, String stateId) {
+        return switch (stateId) {
+            case STATE_INPUT -> LangDefs.GATE_PORT_INPUT.getTranslationKey();
+            case STATE_OUTPUT -> LangDefs.GATE_PORT_OUTPUT.getTranslationKey();
+            default -> LangDefs.GATE_PORT_NONE.getTranslationKey();
+        };
+    }
 
     protected String normalizePortStateId(Direction side, String stateId) {
-        if (stateId == null || stateId.isBlank()) {
-            return getDefaultPortStateId(side);
-        }
-
-        return stateId;
+        return switch (stateId) {
+            case STATE_INPUT, STATE_OUTPUT -> stateId;
+            default -> STATE_NONE;
+        };
     }
+
+    protected abstract void recomputeOutputs();
 
     public String getPortStateId(Direction side) {
         return portStates.getOrDefault(side, getDefaultPortStateId(side));
@@ -115,9 +151,21 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
         return newStateId;
     }
 
+    public int getPortRenderColor(Direction side) {
+        return getRenderColorForState(side, getPortStateId(side));
+    }
+
+    public String getPortDisplayTranslationKey(Direction side) {
+        return getTranslationKeyForState(side, getPortStateId(side));
+    }
+
     @Override
     public LogicPortMode getLogicPortMode(Direction side) {
         return getNetworkModeForState(side, getPortStateId(side));
+    }
+
+    @Override
+    public void beforeLogicNetworkTick(long networkTickId) {
     }
 
     @Override
@@ -135,6 +183,8 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
             return;
         }
 
+        beforeReceiveLogicInput(side, value, networkTickId);
+
         int index = side.ordinal();
 
         if (inputLastNetworkTick[index] != networkTickId) {
@@ -145,8 +195,15 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
         inputAccumulated[index] |= value;
         inputValues[index] = inputAccumulated[index];
 
-        recomputeOutputs();
+        afterReceiveLogicInput(side, value, networkTickId);
         setChanged();
+    }
+
+    protected void beforeReceiveLogicInput(Direction side, boolean value, long networkTickId) {
+    }
+
+    protected void afterReceiveLogicInput(Direction side, boolean value, long networkTickId) {
+        recomputeOutputs();
     }
 
     protected boolean getInput(Direction side) {
@@ -164,6 +221,68 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
         return value;
     }
 
+    protected boolean getOrInputState(String stateId) {
+        boolean value = false;
+
+        for (Direction direction : Direction.values()) {
+            if (stateId.equals(getPortStateId(direction)) && getInput(direction)) {
+                value = true;
+            }
+        }
+
+        return value;
+    }
+
+    protected int getPortStateCount(String stateId) {
+        int count = 0;
+
+        for (Direction direction : Direction.values()) {
+            if (stateId.equals(getPortStateId(direction))) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    protected int getInputPortCount() {
+        int count = 0;
+
+        for (Direction direction : Direction.values()) {
+            if (getLogicPortMode(direction).readsFromCable()) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    protected int getHighInputCount() {
+        int count = 0;
+
+        for (Direction direction : Direction.values()) {
+            if (getInput(direction)) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    protected boolean areAllInputsHigh() {
+        for (Direction direction : Direction.values()) {
+            if (!getLogicPortMode(direction).readsFromCable()) {
+                continue;
+            }
+
+            if (!getInput(direction)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     protected void setOutput(Direction side, boolean value) {
         if (!getLogicPortMode(side).writesToCable()) {
             outputValues[side.ordinal()] = false;
@@ -179,6 +298,14 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
         }
     }
 
+    protected void setOutputsForState(String stateId, boolean value) {
+        for (Direction direction : Direction.values()) {
+            if (stateId.equals(getPortStateId(direction))) {
+                setOutput(direction, value);
+            }
+        }
+    }
+
     public void onGateNeighborChanged(Direction side) {
         if (!getLogicPortMode(side).readsFromCable()) {
             return;
@@ -190,7 +317,7 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
 
         BlockState neighborState = level.getBlockState(worldPosition.relative(side));
 
-        if (!(neighborState.getBlock() instanceof net.oktawia.faststone.blocks.LogicCableBlock)) {
+        if (!(neighborState.getBlock() instanceof LogicCableBlock)) {
             inputValues[side.ordinal()] = false;
             inputAccumulated[side.ordinal()] = false;
             recomputeOutputs();
@@ -198,13 +325,19 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
         }
     }
 
-    private void syncToClient() {
+    protected void syncToClient() {
         if (!(level instanceof ServerLevel serverLevel)) {
             return;
         }
 
         BlockState state = getBlockState();
         serverLevel.sendBlockUpdated(worldPosition, state, state, Block.UPDATE_CLIENTS);
+    }
+
+    protected void saveClientExtra(CompoundTag tag) {
+    }
+
+    protected void loadClientExtra(CompoundTag tag) {
     }
 
     @Override
@@ -328,6 +461,8 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
 
         tag.put("PortStates", statesTag);
         tag.put("PortColors", colorsTag);
+
+        saveClientExtra(tag);
     }
 
     private void loadClientData(CompoundTag tag) {
@@ -352,11 +487,7 @@ public abstract class LogicGateBlockEntity extends LogicEndpointBlockEntity impl
                 );
             }
         }
-    }
 
-    protected abstract int getRenderColorForState(Direction side, String stateId);
-
-    public int getPortRenderColor(Direction side) {
-        return getRenderColorForState(side, getPortStateId(side));
+        loadClientExtra(tag);
     }
 }

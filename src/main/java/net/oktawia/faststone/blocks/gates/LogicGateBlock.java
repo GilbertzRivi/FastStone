@@ -2,6 +2,7 @@ package net.oktawia.faststone.blocks.gates;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -21,11 +22,13 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.network.NetworkHooks;
 import net.oktawia.faststone.blocks.LogicCableBlock;
 import net.oktawia.faststone.entities.gates.LogicGateBlockEntity;
 import net.oktawia.faststone.items.LogicCableBlockItem;
 import net.oktawia.faststone.logic.LogicCableColor;
 import net.oktawia.faststone.logic.interfaces.LogicConnectable;
+import net.oktawia.faststone.logic.interfaces.LogicGateConfigurable;
 import net.oktawia.faststone.logic.network.LogicNetworkGraph;
 
 import java.util.Map;
@@ -52,8 +55,15 @@ public abstract class LogicGateBlock extends Block implements EntityBlock, Logic
             Direction.DOWN,  Block.box(6, 0, 6, 10, 5, 10)
     );
 
-    public LogicGateBlock(BlockBehaviour.Properties properties) {
+    private final int coreColor;
+
+    public LogicGateBlock(BlockBehaviour.Properties properties, int coreColor) {
         super(properties.noOcclusion());
+        this.coreColor = coreColor;
+    }
+
+    public int getCoreColor() {
+        return coreColor;
     }
 
     @Override
@@ -129,8 +139,19 @@ public abstract class LogicGateBlock extends Block implements EntityBlock, Logic
         }
 
         Direction side = getTargetSide(gate, level, pos, hit.getLocation(), hit.getDirection());
-
         ItemStack stack = player.getItemInHand(hand);
+
+        if (player.isShiftKeyDown() && gate instanceof LogicGateConfigurable configurable) {
+            if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+                NetworkHooks.openScreen(
+                        serverPlayer,
+                        configurable,
+                        buffer -> buffer.writeBlockPos(pos)
+                );
+            }
+
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
 
         if (stack.getItem() instanceof LogicCableBlockItem cableItem) {
             if (!level.isClientSide && gate.hasVisiblePort(side)) {
@@ -200,15 +221,15 @@ public abstract class LogicGateBlock extends Block implements EntityBlock, Logic
             Vec3 hitLocation,
             Direction fallback
     ) {
-        double x = hitLocation.x - pos.getX();
-        double y = hitLocation.y - pos.getY();
-        double z = hitLocation.z - pos.getZ();
-
-        Direction portSide = getClickedPortSide(gate, level, pos, x, y, z);
+        Direction portSide = getClickedVisiblePortSide(gate, level, pos, hitLocation);
 
         if (portSide != null) {
             return portSide;
         }
+
+        double x = hitLocation.x - pos.getX();
+        double y = hitLocation.y - pos.getY();
+        double z = hitLocation.z - pos.getZ();
 
         if (inside(x, y, z, 5, 5, 5, 11, 11, 11)) {
             return getCoreSide(x, y, z);
@@ -217,14 +238,16 @@ public abstract class LogicGateBlock extends Block implements EntityBlock, Logic
         return fallback;
     }
 
-    private Direction getClickedPortSide(
+    public static Direction getClickedVisiblePortSide(
             LogicGateBlockEntity gate,
             BlockGetter level,
             BlockPos pos,
-            double x,
-            double y,
-            double z
+            Vec3 hitLocation
     ) {
+        double x = hitLocation.x - pos.getX();
+        double y = hitLocation.y - pos.getY();
+        double z = hitLocation.z - pos.getZ();
+
         for (Direction side : Direction.values()) {
             if (!gate.hasVisiblePort(side)) {
                 continue;
@@ -240,7 +263,7 @@ public abstract class LogicGateBlock extends Block implements EntityBlock, Logic
         return null;
     }
 
-    private boolean insidePortShape(
+    private static boolean insidePortShape(
             Direction side,
             boolean connected,
             double x,
@@ -294,7 +317,7 @@ public abstract class LogicGateBlock extends Block implements EntityBlock, Logic
         return dz >= 0.0D ? Direction.SOUTH : Direction.NORTH;
     }
 
-    private boolean inside(
+    private static boolean inside(
             double x,
             double y,
             double z,

@@ -10,6 +10,7 @@ import net.oktawia.faststone.Faststone;
 import net.oktawia.faststone.defs.regs.BlockRegistrar;
 import net.oktawia.faststone.defs.regs.ItemRegistrar;
 import net.oktawia.faststone.items.LogicCableBlockItem;
+import net.oktawia.faststone.logic.LogicCableColor;
 
 public class FastItemModelProvider extends ItemModelProvider {
 
@@ -32,8 +33,12 @@ public class FastItemModelProvider extends ItemModelProvider {
                 continue;
             }
 
-            if (item instanceof LogicCableBlockItem) {
-                logicCableItem(item);
+            if (item instanceof LogicCableBlockItem cableItem) {
+                if (cableItem.getColor() == LogicCableColor.COLORLESS) {
+                    continue;
+                }
+
+                logicCableItem(cableItem);
             } else {
                 simpleBlockItem(item);
             }
@@ -47,6 +52,11 @@ public class FastItemModelProvider extends ItemModelProvider {
                 || path.equals("logic_bus")
                 || path.equals("logic_input_part")
                 || path.equals("logic_output_part")
+                || path.equals("logic_display_part")
+                || path.equals("logic_sr_latch")
+                || path.equals("logic_d_flip_flop")
+                || path.equals("logic_clock")
+                || path.equals("logic_buffer")
                 || path.contains("gate");
     }
 
@@ -63,9 +73,10 @@ public class FastItemModelProvider extends ItemModelProvider {
         return withExistingParent(path, modLoc("block/" + path));
     }
 
-    private ItemModelBuilder logicCableItem(Item item) {
+    private ItemModelBuilder logicCableItem(LogicCableBlockItem item) {
         String path = ForgeRegistries.ITEMS.getKey(item).getPath();
 
         return withExistingParent(path, modLoc("item/logic_cable"));
     }
+
 }

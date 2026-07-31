@@ -1,7 +1,16 @@
 {
   "values": [
     "faststone:logic_cable",
+    "faststone:logic_bus",
     "faststone:logic_not_gate",
-    "faststone:logic_bus"
+    "faststone:logic_and_gate",
+    "faststone:logic_nand_gate",
+    "faststone:logic_xor_gate",
+    "faststone:logic_xnor_gate",
+    "faststone:logic_constant_gate",
+    "faststone:logic_sr_latch",
+    "faststone:logic_d_flip_flop",
+    "faststone:logic_clock",
+    "faststone:logic_buffer"
   ]
 }

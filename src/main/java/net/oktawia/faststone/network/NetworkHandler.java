@@ -24,6 +24,27 @@ public final class NetworkHandler {
     private NetworkHandler() {}
 
     public static void registerMessages() {
+        CHANNEL.registerMessage(
+                nextId++,
+                SetLogicGateConfigPacket.class,
+                SetLogicGateConfigPacket::encode,
+                SetLogicGateConfigPacket::decode,
+                SetLogicGateConfigPacket::handle
+        );
+        CHANNEL.registerMessage(
+                nextId++,
+                LogicDisplayBatchPacket.class,
+                LogicDisplayBatchPacket::encode,
+                LogicDisplayBatchPacket::decode,
+                LogicDisplayBatchPacket::handle
+        );
+        CHANNEL.registerMessage(
+                nextId++,
+                SetLogicDisplayModePacket.class,
+                SetLogicDisplayModePacket::encode,
+                SetLogicDisplayModePacket::decode,
+                SetLogicDisplayModePacket::handle
+        );
     }
 
     public static void sendToPlayer(ServerPlayer player, Object packet) {

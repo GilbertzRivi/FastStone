@@ -16,30 +16,6 @@
         "up": { "texture": "#all" },
         "down": { "texture": "#all" }
       }
-    },
-    {
-      "from": [0, 5, 5],
-      "to": [5, 11, 11],
-      "faces": {
-        "north": { "texture": "#all" },
-        "south": { "texture": "#all" },
-        "west": { "texture": "#all" },
-        "east": { "texture": "#all" },
-        "up": { "texture": "#all" },
-        "down": { "texture": "#all" }
-      }
-    },
-    {
-      "from": [11, 5, 5],
-      "to": [16, 11, 11],
-      "faces": {
-        "north": { "texture": "#all" },
-        "south": { "texture": "#all" },
-        "west": { "texture": "#all" },
-        "east": { "texture": "#all" },
-        "up": { "texture": "#all" },
-        "down": { "texture": "#all" }
-      }
     }
   ],
   "display": {

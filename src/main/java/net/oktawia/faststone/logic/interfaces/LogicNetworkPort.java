@@ -7,6 +7,9 @@ public interface LogicNetworkPort {
 
     LogicPortMode getLogicPortMode(Direction side);
 
+    default void beforeLogicNetworkTick(long networkTickId) {
+    }
+
     default boolean readLogicOutput(Direction side) {
         return false;
     }

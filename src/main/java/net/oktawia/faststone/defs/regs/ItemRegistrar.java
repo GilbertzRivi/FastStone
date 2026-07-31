@@ -38,5 +38,13 @@ public class ItemRegistrar {
                     )
             );
 
+    public static final RegistryObject<Item> LOGIC_DISPLAY_PART =
+            ITEMS.register("logic_display_part", () ->
+                    new LogicCablePartItem(
+                            new Item.Properties(),
+                            LogicCablePartType.DISPLAY
+                    )
+            );
+
     private ItemRegistrar() {}
 }

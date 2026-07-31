@@ -11,7 +11,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "faststone:logic_cable_black"
+          "name": "faststone:logic_cable_colorless"
         }
       ],
       "rolls": 1.0

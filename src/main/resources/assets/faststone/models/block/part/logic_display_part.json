@@ -1,0 +1,76 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "display": "faststone:block/part/logic_display_part",
+    "connector": "faststone:block/logic_cable",
+    "particle": "faststone:block/part/logic_display_part"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 1],
+      "faces": {
+        "north": {
+          "texture": "#display",
+          "uv": [0, 0, 16, 16]
+        },
+        "south": {
+          "texture": "#display",
+          "uv": [0, 0, 16, 16]
+        },
+        "east": {
+          "texture": "#display",
+          "uv": [0, 0, 1, 16]
+        },
+        "west": {
+          "texture": "#display",
+          "uv": [0, 0, 1, 16]
+        },
+        "up": {
+          "texture": "#display",
+          "uv": [0, 0, 16, 1]
+        },
+        "down": {
+          "texture": "#display",
+          "uv": [0, 0, 16, 1]
+        }
+      }
+    },
+    {
+      "from": [6, 6, 1],
+      "to": [10, 10, 6],
+      "faces": {
+        "north": {
+          "texture": "#connector",
+          "uv": [6, 6, 10, 10],
+          "tintindex": 0
+        },
+        "south": {
+          "texture": "#connector",
+          "uv": [6, 6, 10, 10],
+          "tintindex": 0
+        },
+        "east": {
+          "texture": "#connector",
+          "uv": [1, 6, 6, 10],
+          "tintindex": 0
+        },
+        "west": {
+          "texture": "#connector",
+          "uv": [1, 6, 6, 10],
+          "tintindex": 0
+        },
+        "up": {
+          "texture": "#connector",
+          "uv": [6, 1, 10, 6],
+          "tintindex": 0
+        },
+        "down": {
+          "texture": "#connector",
+          "uv": [6, 1, 10, 6],
+          "tintindex": 0
+        }
+      }
+    }
+  ]
+}

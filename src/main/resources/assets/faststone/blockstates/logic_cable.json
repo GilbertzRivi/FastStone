@@ -1,13 +1,25 @@
 {
   "multipart": [
     {
+      "when": {
+        "color": "white|orange|magenta|light_blue|yellow|lime|pink|gray|light_gray|cyan|purple|blue|brown|green|red|black"
+      },
       "apply": {
         "model": "faststone:block/logic_cable_core"
+      }
+    },
+    {
+      "when": {
+        "color": "colorless"
+      },
+      "apply": {
+        "model": "faststone:block/logic_cable_core_colorless"
       }
     },
 
     {
       "when": {
+        "color": "white|orange|magenta|light_blue|yellow|lime|pink|gray|light_gray|cyan|purple|blue|brown|green|red|black",
         "north": "true"
       },
       "apply": {
@@ -15,9 +27,20 @@
         "uvlock": true
       }
     },
+    {
+      "when": {
+        "color": "colorless",
+        "north": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_cable_side_colorless",
+        "uvlock": true
+      }
+    },
 
     {
       "when": {
+        "color": "white|orange|magenta|light_blue|yellow|lime|pink|gray|light_gray|cyan|purple|blue|brown|green|red|black",
         "south": "true"
       },
       "apply": {
@@ -26,9 +49,21 @@
         "uvlock": true
       }
     },
+    {
+      "when": {
+        "color": "colorless",
+        "south": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_cable_side_colorless",
+        "y": 180,
+        "uvlock": true
+      }
+    },
 
     {
       "when": {
+        "color": "white|orange|magenta|light_blue|yellow|lime|pink|gray|light_gray|cyan|purple|blue|brown|green|red|black",
         "west": "true"
       },
       "apply": {
@@ -37,9 +72,21 @@
         "uvlock": true
       }
     },
+    {
+      "when": {
+        "color": "colorless",
+        "west": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_cable_side_colorless",
+        "y": 270,
+        "uvlock": true
+      }
+    },
 
     {
       "when": {
+        "color": "white|orange|magenta|light_blue|yellow|lime|pink|gray|light_gray|cyan|purple|blue|brown|green|red|black",
         "east": "true"
       },
       "apply": {
@@ -48,9 +95,21 @@
         "uvlock": true
       }
     },
+    {
+      "when": {
+        "color": "colorless",
+        "east": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_cable_side_colorless",
+        "y": 90,
+        "uvlock": true
+      }
+    },
 
     {
       "when": {
+        "color": "white|orange|magenta|light_blue|yellow|lime|pink|gray|light_gray|cyan|purple|blue|brown|green|red|black",
         "up": "true"
       },
       "apply": {
@@ -58,13 +117,35 @@
         "uvlock": true
       }
     },
+    {
+      "when": {
+        "color": "colorless",
+        "up": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_cable_side_vertical_colorless",
+        "uvlock": true
+      }
+    },
 
     {
       "when": {
+        "color": "white|orange|magenta|light_blue|yellow|lime|pink|gray|light_gray|cyan|purple|blue|brown|green|red|black",
         "down": "true"
       },
       "apply": {
         "model": "faststone:block/logic_cable_side_vertical",
+        "x": 180,
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "color": "colorless",
+        "down": "true"
+      },
+      "apply": {
+        "model": "faststone:block/logic_cable_side_vertical_colorless",
         "x": 180,
         "uvlock": true
       }

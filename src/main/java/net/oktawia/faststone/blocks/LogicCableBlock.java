@@ -2,11 +2,17 @@ package net.oktawia.faststone.blocks;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.network.NetworkHooks;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -27,9 +33,11 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.registries.RegistryObject;
+import net.oktawia.faststone.defs.LangDefs;
 import net.oktawia.faststone.defs.regs.BlockRegistrar;
 import net.oktawia.faststone.defs.regs.ItemRegistrar;
 import net.oktawia.faststone.entities.LogicCableBlockEntity;
+import net.oktawia.faststone.menus.LogicDisplayConfigMenu;
 import net.oktawia.faststone.items.LogicCableBlockItem;
 import net.oktawia.faststone.logic.LogicCableColor;
 import net.oktawia.faststone.logic.interfaces.LogicConnectable;
@@ -175,9 +183,27 @@ public class LogicCableBlock extends Block implements EntityBlock, LogicConnecta
             return InteractionResult.PASS;
         }
 
+        if (cable.getPart(partSide) == LogicCablePartType.DISPLAY && !player.isShiftKeyDown()) {
+            if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+                NetworkHooks.openScreen(
+                        serverPlayer,
+                        new SimpleMenuProvider(
+                                (id, inv, p) -> new LogicDisplayConfigMenu(id, inv, pos, partSide),
+                                Component.translatable(LangDefs.SCREEN_LOGIC_DISPLAY_TITLE.getTranslationKey())
+                        ),
+                        buffer -> {
+                            buffer.writeBlockPos(pos);
+                            buffer.writeByte(partSide.ordinal());
+                        }
+                );
+            }
+
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+
         ItemStack held = player.getItemInHand(hand);
 
-        if (!player.isShiftKeyDown() && !held.isEmpty()) {
+        if (!player.isShiftKeyDown() || !held.isEmpty()) {
             return InteractionResult.PASS;
         }
 
@@ -294,18 +320,69 @@ public class LogicCableBlock extends Block implements EntityBlock, LogicConnecta
 
         if (otherState.getBlock() instanceof LogicCableBlock) {
             return otherState.hasProperty(COLOR)
-                    && otherState.getValue(COLOR) == selfColor
+                    && LogicCableColor.areCompatible(
+                    selfColor,
+                    otherState.getValue(COLOR)
+            )
                     && !hasPartAt(level, otherPos, dir.getOpposite());
         }
 
         if (otherState.getBlock() instanceof LogicConnectable connectable) {
-            return connectable.canConnectLogic(
+            return canConnectToConnectable(
+                    connectable,
                     otherState,
                     level,
                     otherPos,
                     dir.getOpposite(),
                     selfColor
             );
+        }
+
+        return false;
+    }
+
+    private boolean canConnectToConnectable(
+            LogicConnectable connectable,
+            BlockState otherState,
+            BlockGetter level,
+            BlockPos otherPos,
+            Direction otherSide,
+            LogicCableColor selfColor
+    ) {
+        if (selfColor != LogicCableColor.COLORLESS) {
+            return connectable.canConnectLogic(
+                    otherState,
+                    level,
+                    otherPos,
+                    otherSide,
+                    selfColor
+            );
+        }
+
+        if (connectable.canConnectLogic(
+                otherState,
+                level,
+                otherPos,
+                otherSide,
+                LogicCableColor.COLORLESS
+        )) {
+            return true;
+        }
+
+        for (LogicCableColor color : LogicCableColor.values()) {
+            if (color.isColorless()) {
+                continue;
+            }
+
+            if (connectable.canConnectLogic(
+                    otherState,
+                    level,
+                    otherPos,
+                    otherSide,
+                    color
+            )) {
+                return true;
+            }
         }
 
         return false;
@@ -320,7 +397,10 @@ public class LogicCableBlock extends Block implements EntityBlock, LogicConnecta
             LogicCableColor cableColor
     ) {
         return state.hasProperty(COLOR)
-                && state.getValue(COLOR) == cableColor
+                && LogicCableColor.areCompatible(
+                state.getValue(COLOR),
+                cableColor
+        )
                 && !hasPartAt(level, pos, side);
     }
 
@@ -398,6 +478,23 @@ public class LogicCableBlock extends Block implements EntityBlock, LogicConnecta
             BlockPos pos,
             Player player
     ) {
+        if (target instanceof BlockHitResult blockHit
+                && level.getBlockEntity(pos) instanceof LogicCableBlockEntity cable) {
+            Direction partSide = getClickedPartSide(
+                    cable,
+                    pos,
+                    blockHit.getLocation()
+            );
+
+            if (partSide != null) {
+                LogicCablePartType part = cable.getPart(partSide);
+
+                if (part != LogicCablePartType.NONE) {
+                    return getPartItemStack(part);
+                }
+            }
+        }
+
         LogicCableColor color = state.hasProperty(COLOR)
                 ? state.getValue(COLOR)
                 : LogicCableColor.RED;
@@ -489,6 +586,7 @@ public class LogicCableBlock extends Block implements EntityBlock, LogicConnecta
         return switch (type) {
             case INPUT -> new ItemStack(ItemRegistrar.LOGIC_INPUT_PART.get());
             case OUTPUT -> new ItemStack(ItemRegistrar.LOGIC_OUTPUT_PART.get());
+            case DISPLAY -> new ItemStack(ItemRegistrar.LOGIC_DISPLAY_PART.get());
             case NONE -> ItemStack.EMPTY;
         };
     }

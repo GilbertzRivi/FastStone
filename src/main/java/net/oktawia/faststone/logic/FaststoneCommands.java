@@ -1,12 +1,17 @@
 package net.oktawia.faststone.logic;
 
-import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.FloatArgumentType;
+import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterClientCommandsEvent;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.oktawia.faststone.Faststone;
+import net.oktawia.faststone.client.render.LogicCableBlockEntityRenderer;
 import net.oktawia.faststone.logic.network.LogicNetworkClock;
 
 @Mod.EventBusSubscriber(modid = Faststone.MODID)
@@ -23,18 +28,18 @@ public class FaststoneCommands {
 
                                 .then(Commands.argument(
                                                 "tickrate",
-                                                IntegerArgumentType.integer(
-                                                        LogicNetworkClock.MIN_NETWORK_TICKS_PER_GAME_TICK,
-                                                        LogicNetworkClock.MAX_NETWORK_TICKS_PER_GAME_TICK
+                                                FloatArgumentType.floatArg(
+                                                        LogicNetworkClock.MIN_NETWORK_TICK_RATE,
+                                                        LogicNetworkClock.MAX_NETWORK_TICK_RATE
                                                 )
                                         )
                                         .executes(context -> {
-                                            int requestedTickrate = IntegerArgumentType.getInteger(
+                                            float requestedTickrate = FloatArgumentType.getFloat(
                                                     context,
                                                     "tickrate"
                                             );
 
-                                            int actualTickrate = LogicNetworkClock.setNetworkTicksPerGameTick(
+                                            float actualTickrate = LogicNetworkClock.setNetworkTickRate(
                                                     requestedTickrate
                                             );
 
@@ -47,15 +52,57 @@ public class FaststoneCommands {
                                                     true
                                             );
 
-                                            return actualTickrate;
+                                            return (int) actualTickrate;
                                         })
                                 )
                         )
         );
     }
 
+    @Mod.EventBusSubscriber(modid = Faststone.MODID, value = Dist.CLIENT)
+    public static class Client {
+
+        @SubscribeEvent
+        public static void registerClientCommands(RegisterClientCommandsEvent event) {
+            event.getDispatcher().register(
+                    Commands.literal("faststone")
+                            .then(Commands.literal("cablerender")
+                                    .executes(ctx -> {
+                                        boolean nowEnabled = !LogicCableBlockEntityRenderer.cableGlowEnabled;
+                                        LogicCableBlockEntityRenderer.cableGlowEnabled = nowEnabled;
+                                        Minecraft.getInstance().player.sendSystemMessage(
+                                                Component.literal("Cable glow render: " + (nowEnabled ? "on" : "off"))
+                                        );
+                                        return Command.SINGLE_SUCCESS;
+                                    })
+                                    .then(Commands.literal("on")
+                                            .executes(ctx -> {
+                                                LogicCableBlockEntityRenderer.cableGlowEnabled = true;
+                                                Minecraft.getInstance().player.sendSystemMessage(
+                                                        Component.literal("Cable glow render: on")
+                                                );
+                                                return Command.SINGLE_SUCCESS;
+                                            })
+                                    )
+                                    .then(Commands.literal("off")
+                                            .executes(ctx -> {
+                                                LogicCableBlockEntityRenderer.cableGlowEnabled = false;
+                                                Minecraft.getInstance().player.sendSystemMessage(
+                                                        Component.literal("Cable glow render: off")
+                                                );
+                                                return Command.SINGLE_SUCCESS;
+                                            })
+                                    )
+                            )
+            );
+        }
+
+        private Client() {
+        }
+    }
+
     private static int showTickrate(net.minecraft.commands.CommandSourceStack source) {
-        int tickrate = LogicNetworkClock.getNetworkTicksPerGameTick();
+        float tickrate = LogicNetworkClock.getNetworkTickRate();
 
         source.sendSuccess(
                 () -> Component.literal(
@@ -66,6 +113,6 @@ public class FaststoneCommands {
                 false
         );
 
-        return tickrate;
+        return (int) tickrate;
     }
 }

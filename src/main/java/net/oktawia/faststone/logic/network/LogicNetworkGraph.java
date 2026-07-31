@@ -12,6 +12,7 @@ import net.oktawia.faststone.entities.LogicCableBlockEntity;
 import net.oktawia.faststone.logic.LogicCableColor;
 import net.oktawia.faststone.logic.LogicPortMode;
 import net.oktawia.faststone.logic.interfaces.LogicNetworkPort;
+import net.oktawia.faststone.logic.parts.LogicCablePartType;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -184,8 +185,9 @@ public class LogicNetworkGraph {
 
         List<LogicEndpointRef> inputs = new ArrayList<>();
         List<LogicEndpointRef> outputs = new ArrayList<>();
+        List<LogicDisplayRef> displays = new ArrayList<>();
 
-        collectEndpoints(level, wires, color, inputs, outputs);
+        collectEndpoints(level, wires, color, inputs, outputs, displays);
 
         for (BlockPos wirePos : wires) {
             BlockEntity be = level.getBlockEntity(wirePos);
@@ -203,7 +205,7 @@ public class LogicNetworkGraph {
             }
 
             if (wirePos.equals(masterPos)) {
-                cable.becomeMaster(wires, inputs, outputs);
+                cable.becomeMaster(wires, inputs, outputs, displays);
             } else {
                 cable.becomeMember(masterPos);
             }
@@ -215,25 +217,42 @@ public class LogicNetworkGraph {
     private static Set<BlockPos> collectWiresForColor(
             ServerLevel level,
             BlockPos startPos,
-            LogicCableColor color
+            LogicCableColor ignoredColor
     ) {
-        if (!isWireForColor(level, startPos, color)) {
+        BlockState startState = level.getBlockState(startPos);
+
+        if (!(startState.getBlock() instanceof LogicCableBlock)) {
             return Set.of();
         }
 
-        Set<BlockPos> visited = new HashSet<>();
-        ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+        if (!startState.hasProperty(LogicCableBlock.COLOR)) {
+            return Set.of();
+        }
 
-        visited.add(startPos.immutable());
-        queue.add(startPos.immutable());
+        LogicCableColor startColor = startState.getValue(LogicCableBlock.COLOR);
+        LogicCableColor startChannel = startColor.isColorless()
+                ? LogicCableColor.COLORLESS
+                : startColor;
 
-        while (!queue.isEmpty() && visited.size() < NETWORK_HARD_LIMIT) {
-            BlockPos pos = queue.removeFirst();
+        Set<BlockPos> wires = new HashSet<>();
+        Set<TraversalNode> visited = new HashSet<>();
+        ArrayDeque<TraversalNode> queue = new ArrayDeque<>();
+
+        TraversalNode start = new TraversalNode(startPos.immutable(), startChannel);
+
+        visited.add(start);
+        queue.add(start);
+
+        while (!queue.isEmpty() && wires.size() < NETWORK_HARD_LIMIT) {
+            TraversalNode node = queue.removeFirst();
+            BlockPos pos = node.pos();
             BlockState state = level.getBlockState(pos);
 
-            if (!isWireForColor(level, pos, color)) {
+            if (!isWireState(state)) {
                 continue;
             }
+
+            wires.add(pos.immutable());
 
             for (Direction dir : Direction.values()) {
                 if (!isConnectedOnSide(state, dir)) {
@@ -241,43 +260,38 @@ public class LogicNetworkGraph {
                 }
 
                 BlockPos nextPos = pos.relative(dir);
+                BlockState nextState = level.getBlockState(nextPos);
 
-                if (!isWireForColor(level, nextPos, color)) {
+                if (!isWireState(nextState)) {
                     continue;
                 }
-
-                BlockState nextState = level.getBlockState(nextPos);
 
                 if (!isConnectedOnSide(nextState, dir.getOpposite())) {
                     continue;
                 }
 
-                if (visited.add(nextPos.immutable())) {
-                    queue.add(nextPos.immutable());
+                LogicCableColor nextChannel = getNextTraversalChannel(
+                        state,
+                        node.channel(),
+                        nextState
+                );
+
+                if (nextChannel == null) {
+                    continue;
+                }
+
+                TraversalNode nextNode = new TraversalNode(
+                        nextPos.immutable(),
+                        nextChannel
+                );
+
+                if (visited.add(nextNode)) {
+                    queue.add(nextNode);
                 }
             }
         }
 
-        return visited;
-    }
-
-    private static boolean isWireForColor(
-            ServerLevel level,
-            BlockPos pos,
-            LogicCableColor color
-    ) {
-        BlockState state = level.getBlockState(pos);
-
-        if (state.getBlock() instanceof LogicBusBlock) {
-            return true;
-        }
-
-        if (state.getBlock() instanceof LogicCableBlock) {
-            return state.hasProperty(LogicCableBlock.COLOR)
-                    && state.getValue(LogicCableBlock.COLOR) == color;
-        }
-
-        return false;
+        return wires;
     }
 
     private static boolean isConnectedOnSide(BlockState state, Direction dir) {
@@ -297,7 +311,8 @@ public class LogicNetworkGraph {
             Set<BlockPos> wires,
             LogicCableColor color,
             List<LogicEndpointRef> inputs,
-            List<LogicEndpointRef> outputs
+            List<LogicEndpointRef> outputs,
+            List<LogicDisplayRef> displays
     ) {
         Set<LogicEndpointRef> seenInputs = new HashSet<>();
         Set<LogicEndpointRef> seenOutputs = new HashSet<>();
@@ -306,14 +321,6 @@ public class LogicNetworkGraph {
             BlockState wireState = level.getBlockState(wirePos);
 
             if (!(wireState.getBlock() instanceof LogicCableBlock)) {
-                continue;
-            }
-
-            if (!wireState.hasProperty(LogicCableBlock.COLOR)) {
-                continue;
-            }
-
-            if (wireState.getValue(LogicCableBlock.COLOR) != color) {
                 continue;
             }
 
@@ -331,7 +338,8 @@ public class LogicNetworkGraph {
                         seenInputs,
                         seenOutputs,
                         inputs,
-                        outputs
+                        outputs,
+                        displays
                 );
             }
 
@@ -355,9 +363,17 @@ public class LogicNetworkGraph {
             Set<LogicEndpointRef> seenInputs,
             Set<LogicEndpointRef> seenOutputs,
             List<LogicEndpointRef> inputs,
-            List<LogicEndpointRef> outputs
+            List<LogicEndpointRef> outputs,
+            List<LogicDisplayRef> displays
     ) {
         for (Direction side : Direction.values()) {
+            LogicCablePartType part = cable.getPart(side);
+
+            if (part == LogicCablePartType.DISPLAY) {
+                displays.add(new LogicDisplayRef(cablePos.immutable(), side));
+                continue;
+            }
+
             LogicPortMode mode = cable.getLogicPortMode(side);
 
             if (mode == LogicPortMode.NONE) {
@@ -441,14 +457,6 @@ public class LogicNetworkGraph {
                 continue;
             }
 
-            if (!state.hasProperty(LogicCableBlock.COLOR)) {
-                continue;
-            }
-
-            if (state.getValue(LogicCableBlock.COLOR) != color) {
-                continue;
-            }
-
             if (master == null || compareMasterCandidate(pos, master) > 0) {
                 master = pos.immutable();
             }
@@ -471,5 +479,84 @@ public class LogicNetworkGraph {
         }
 
         return Integer.compare(a.getZ(), b.getZ());
+    }
+
+    private static boolean isWireState(BlockState state) {
+        return state.getBlock() instanceof LogicCableBlock
+                || state.getBlock() instanceof LogicBusBlock;
+    }
+
+    private static LogicCableColor getNextTraversalChannel(
+            BlockState currentState,
+            LogicCableColor currentChannel,
+            BlockState nextState
+    ) {
+        boolean currentCable = currentState.getBlock() instanceof LogicCableBlock;
+        boolean currentBus = currentState.getBlock() instanceof LogicBusBlock;
+        boolean nextCable = nextState.getBlock() instanceof LogicCableBlock;
+        boolean nextBus = nextState.getBlock() instanceof LogicBusBlock;
+
+        if (currentBus && nextBus) {
+            return currentChannel;
+        }
+
+        if (currentCable && nextBus) {
+            if (!currentState.hasProperty(LogicCableBlock.COLOR)) {
+                return null;
+            }
+
+            LogicCableColor currentColor = currentState.getValue(LogicCableBlock.COLOR);
+
+            return currentColor.isColorless()
+                    ? LogicCableColor.COLORLESS
+                    : currentColor;
+        }
+
+        if (currentBus && nextCable) {
+            if (!nextState.hasProperty(LogicCableBlock.COLOR)) {
+                return null;
+            }
+
+            LogicCableColor nextColor = nextState.getValue(LogicCableBlock.COLOR);
+
+            if (currentChannel.isColorless()) {
+                return nextColor.isColorless()
+                        ? LogicCableColor.COLORLESS
+                        : nextColor;
+            }
+
+            if (nextColor.isColorless()) {
+                return LogicCableColor.COLORLESS;
+            }
+
+            if (nextColor == currentChannel) {
+                return currentChannel;
+            }
+
+            return null;
+        }
+
+        if (currentCable && nextCable) {
+            if (!currentState.hasProperty(LogicCableBlock.COLOR)
+                    || !nextState.hasProperty(LogicCableBlock.COLOR)) {
+                return null;
+            }
+
+            LogicCableColor currentColor = currentState.getValue(LogicCableBlock.COLOR);
+            LogicCableColor nextColor = nextState.getValue(LogicCableBlock.COLOR);
+
+            if (!LogicCableColor.areCompatible(currentColor, nextColor)) {
+                return null;
+            }
+
+            return nextColor.isColorless()
+                    ? LogicCableColor.COLORLESS
+                    : nextColor;
+        }
+
+        return null;
+    }
+
+    private record TraversalNode(BlockPos pos, LogicCableColor channel) {
     }
 }

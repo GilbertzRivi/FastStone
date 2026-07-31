@@ -18,7 +18,8 @@ public enum LogicCableColor implements StringRepresentable {
     BROWN("brown", 0x8B5A2B),
     GREEN("green", 0x33AA33),
     RED("red", 0xFF3333),
-    BLACK("black", 0x111111);
+    BLACK("black", 0x111111),
+    COLORLESS("colorless", 0xB0B0B0);
 
     private final String name;
     private final int rgb;
@@ -39,6 +40,19 @@ public enum LogicCableColor implements StringRepresentable {
     @Override
     public String getSerializedName() {
         return name;
+    }
+
+    public boolean isColorless() {
+        return this == COLORLESS;
+    }
+
+    public boolean canConnectTo(LogicCableColor other) {
+        return other != null
+                && (this == other || this.isColorless() || other.isColorless());
+    }
+
+    public static boolean areCompatible(LogicCableColor a, LogicCableColor b) {
+        return a != null && a.canConnectTo(b);
     }
 
     public static LogicCableColor byName(String name) {

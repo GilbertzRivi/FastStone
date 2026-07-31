@@ -1,0 +1,10 @@
+{
+  "parent": "faststone:block/gate/logic_nor_gate",
+  "display": {
+    "gui": {
+      "rotation": [30, 135, 0],
+      "translation": [0, 0, 0],
+      "scale": [1.3, 1.3, 1.3]
+    }
+  }
+}

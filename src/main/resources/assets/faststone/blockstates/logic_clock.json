@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "faststone:block/logic_clock"
+    }
+  }
+}

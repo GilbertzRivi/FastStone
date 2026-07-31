@@ -1,0 +1,6 @@
+{
+  "parent": "faststone:block/gate/logic_gate_core",
+  "textures": {
+    "gate": "faststone:block/gate/logic_gate"
+  }
+}

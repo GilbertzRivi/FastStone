@@ -30,7 +30,7 @@ public class Faststone {
         BlockRegistrar.BLOCKS.register(modEventBus);
         BlockRegistrar.BLOCK_ITEMS.register(modEventBus);
         BlockEntityRegistrar.BLOCK_ENTITIES.register(modEventBus);
-        MenuRegistrar.MENU_TYPES.register(modEventBus);
+        MenuRegistrar.MENUS.register(modEventBus);
 
         modEventBus.addListener(this::registerCreativeTab);
 
@@ -68,6 +68,7 @@ public class Faststone {
 
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
+            event.enqueueWork(ScreenRegistrar::register);
         }
     }
 }

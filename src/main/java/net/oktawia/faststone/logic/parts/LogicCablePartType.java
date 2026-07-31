@@ -5,7 +5,8 @@ import net.minecraft.util.StringRepresentable;
 public enum LogicCablePartType implements StringRepresentable {
     NONE("none"),
     INPUT("input"),
-    OUTPUT("output");
+    OUTPUT("output"),
+    DISPLAY("display");
 
     private final String name;
 

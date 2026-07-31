@@ -11,6 +11,7 @@ import net.minecraftforge.client.model.generators.ModelFile;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.oktawia.faststone.Faststone;
+import net.oktawia.faststone.blocks.gates.LogicGateBlock;
 import net.oktawia.faststone.defs.regs.BlockRegistrar;
 
 public class FastBlockStateProvider extends BlockStateProvider {
@@ -23,9 +24,9 @@ public class FastBlockStateProvider extends BlockStateProvider {
     protected void registerStatesAndModels() {
         for (var block : BlockRegistrar.getBlocks()) {
             if (
-                    block == BlockRegistrar.LOGIC_CABLE.get() ||
-                    block == BlockRegistrar.LOGIC_BUS.get() ||
-                    block == BlockRegistrar.LOGIC_NOT_GATE.get()
+                    block == BlockRegistrar.LOGIC_CABLE.get()
+                    || block == BlockRegistrar.LOGIC_BUS.get()
+                    || block instanceof LogicGateBlock
             ) {
                 continue;
             }

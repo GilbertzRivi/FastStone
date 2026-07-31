@@ -9,8 +9,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class LogicNotGateBlock extends LogicGateBlock {
 
+    private static final int CORE_COLOR = 0xC97FFF;
+
     public LogicNotGateBlock(BlockBehaviour.Properties properties) {
-        super(properties);
+        super(properties, CORE_COLOR);
     }
 
     @Nullable

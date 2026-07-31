@@ -35,6 +35,11 @@ public final class LogicPartModelShapes {
                 LogicCablePartType.OUTPUT,
                 buildDirectionalShapes(loadModelBoxes("logic_output_part"))
         );
+
+        SHAPES.put(
+                LogicCablePartType.DISPLAY,
+                buildDirectionalShapes(loadModelBoxes("logic_display_part"))
+        );
     }
 
     private LogicPartModelShapes() {
